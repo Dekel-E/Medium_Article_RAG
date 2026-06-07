@@ -6,6 +6,7 @@ Usage:
 """
 import json
 import os
+import time
 import urllib.request
 
 BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
@@ -46,8 +47,10 @@ def main():
 
     for q in QUESTIONS:
         print("Q:", q)
+        t0 = time.perf_counter()
         out = post_json(f"{BASE_URL}/api/prompt", {"question": q})
-        print("A:", out.get("response"))
+        elapsed = time.perf_counter() - t0
+        print(f"A ({elapsed:.2f}s):", out.get("response"))
         ctx = out.get("context", [])
         print("Retrieved:", " | ".join(f"{c['title']} ({c['score']})" for c in ctx))
         print("-" * 80)
