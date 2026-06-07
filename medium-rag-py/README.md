@@ -1,156 +1,172 @@
-# Medium Article RAG Assistant (Python + LangChain)
+# Medium Article RAG Assistant
 
-A Retrieval-Augmented Generation system that answers questions **only** from a
-dataset of ~7,600 English Medium articles. Built with **FastAPI + LangChain +
-Pinecone**, deployable to **Vercel** as a Python serverless function.
+A RAG system built on ~7,600 English Medium articles. You ask a question, it finds the most relevant chunks from the corpus, and the chat model answers strictly from that retrieved context — no internet, no hallucinated facts.
 
-Supports the four required question categories: precise fact retrieval,
-multi-result topic listing (up to 3 distinct articles), key-idea summary
-extraction, and recommendation-with-justification.
+Built with FastAPI, LangChain, Pinecone, and deployed to Vercel.
 
 ---
 
 ## How it works
 
 ```
-question ─▶ OpenAIEmbeddings (text-embedding-3-small, 1536-d via LangChain)
-        ─▶ PineconeVectorStore similarity search (over-fetch + per-article cap)
-        ─▶ build augmented prompt (required system prompt + retrieved passages)
-        ─▶ ChatOpenAI (gpt-5-mini) answers strictly from context
-        ─▶ { response, context, Augmented_prompt }
+question
+  → embed with text-embedding-3-small (1536-d)
+  → similarity search in Pinecone (over-fetch × 4, then cap per article)
+  → build prompt: required system prompt + retrieved passages
+  → gpt-5-mini answers only from context
+  → { response, context, Augmented_prompt }
 ```
 
-Ingestion is a **separate, one-time, local script**, so you never re-embed the
-corpus on each deploy or parameter tweak.
+The retrieval over-fetches (`top_k × 4`) and then greedily caps how many chunks can come from the same article. This keeps the context diverse for "list 3 distinct articles" questions while still returning multiple strong passages for fact lookups and summaries.
+
+---
+
+## Project layout
 
 ```
-api/index.py     FastAPI app (Vercel entrypoint): /api/prompt, /api/stats, /
-rag/config.py    hyperparameters + model names (from env)
-rag/clients.py   lazy LangChain embeddings / chat / Pinecone vector store
-rag/prompts.py   required system prompt (verbatim) + user-prompt builder
-rag/pipeline.py  diversity retrieval + grounded answer generation
-scripts/ingest.py  CSV -> token chunks -> embed -> Pinecone
-scripts/eval.py    runs the 4 example questions against a running URL
+api/
+  index.py          FastAPI app — Vercel entrypoint
+  ui.html           browser UI
+  static/           CSS + JS for the UI
+rag/
+  config.py         all hyperparameters, read from env
+  clients.py        lazy LangChain + Pinecone factories
+  prompts.py        system prompt (verbatim required text) + user-prompt builder
+  pipeline.py       retrieval + answer generation
+scripts/
+  ingest.py         one-time CSV → chunk → embed → Pinecone
+  eval.py           smoke-tests all 4 question categories against a running URL
 ```
 
 ---
 
-## 1. Setup
+## Setup
 
 ```bash
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements-dev.txt      # includes uvicorn for local dev
-cp .env.example .env.local               # fill in the values
+python -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
+pip install -r requirements-dev.txt
 ```
 
-Fill `.env.local`:
+Create `.env.local` with these values:
 
-| Variable | What to put |
+| Variable | Value |
 |---|---|
-| `OPENAI_API_KEY` | the key the course gave you |
-| `OPENAI_BASE_URL` | gateway base URL (e.g. `https://.../v1`); blank only for real OpenAI |
-| `EMBEDDING_MODEL` | `4UHRUIN-text-embedding-3-small` (default) |
-| `CHAT_MODEL` | `4UHRUIN-gpt-5-mini` (default) |
-| `PINECONE_API_KEY` | from the Pinecone console |
-| `PINECONE_INDEX` | `medium-rag` (default; created automatically) |
-| `CHUNK_SIZE` / `OVERLAP_RATIO` / `TOP_K` | `512` / `0.15` / `12` |
+| `OPENAI_API_KEY` | your course API key |
+| `OPENAI_BASE_URL` | gateway base URL (e.g. `https://.../v1`) |
+| `EMBEDDING_MODEL` | `4UHRUIN-text-embedding-3-small` |
+| `CHAT_MODEL` | `4UHRUIN-gpt-5-mini` |
+| `PINECONE_API_KEY` | from your Pinecone console |
+| `PINECONE_INDEX` | `medium-rag` (created automatically on first ingest) |
+| `CHUNK_SIZE` | `512` |
+| `OVERLAP_RATIO` | `0.15` |
+| `TOP_K` | `12` |
 | `MAX_CHUNKS_PER_ARTICLE` | `3` |
 
-The index is created with dimension **1536** to match `text-embedding-3-small`.
+---
 
-## 2. Ingest the data (run locally, once)
+## Ingest
+
+Run this **locally**, once. It embeds the corpus and upserts everything into Pinecone. You never need to re-run it unless you change `CHUNK_SIZE` or `OVERLAP_RATIO`.
 
 ```bash
-# Start SMALL to validate cheaply:
-python scripts/ingest.py data/medium.csv --limit 200
+# Start with a small slice to validate cheaply
+python scripts/ingest.py data/medium-english-50mb.csv --limit 200
 
-# Then ingest the full corpus:
-python scripts/ingest.py data/medium.csv
+# Full corpus once you're happy
+python scripts/ingest.py data/medium-english-50mb.csv
 ```
 
-`--start N` lets you resume / ingest a slice. Chunks are embedded 100 at a time
-and upserted to Pinecone in batches.
+`--start N` lets you resume from a row offset if something interrupted mid-ingest. The chunker uses tiktoken (`cl100k_base`) so chunk sizes are real tokens, not characters.
 
-## 3. Run locally
+`TOP_K` and `MAX_CHUNKS_PER_ARTICLE` are query-time parameters — you can tune them in `.env.local` and re-run `eval.py` without touching Pinecone.
+
+---
+
+## Run locally
 
 ```bash
 uvicorn api.index:app --reload --port 8000
-# open http://localhost:8000   (status page; docs at /docs)
-
-BASE_URL=http://localhost:8000 python scripts/eval.py   # smoke-test the 4 Qs
 ```
 
-## 4. Deploy to Vercel
+Open `http://localhost:8000` for the browser UI, or hit the endpoints directly:
 
-1. Push to GitHub.
-2. Import in Vercel → **New Project** (it auto-detects Python via `requirements.txt`).
-3. Add the same env vars under **Settings → Environment Variables**.
-4. Deploy. Endpoints:
-   - `POST https://<your-app>.vercel.app/api/prompt`
-   - `GET  https://<your-app>.vercel.app/api/stats`
+```bash
+# Smoke-test all 4 question types
+BASE_URL=http://localhost:8000 python scripts/eval.py
+```
 
-`vercel.json` rewrites every path to the single FastAPI function, which routes
-on the original path. Keep the Pinecone index active until grading is done.
+---
+
+## Deploy to Vercel
+
+1. Push the repo to GitHub.
+2. Import the project in Vercel (it picks up `requirements.txt` automatically).
+3. Add all the env vars under **Settings → Environment Variables**.
+4. Deploy.
+
+`vercel.json` rewrites every incoming path to `api/index.py`, which FastAPI then routes internally. The Pinecone index needs to stay active until grading is done.
+
+Live endpoints:
+- `POST https://<your-app>.vercel.app/api/prompt`
+- `GET  https://<your-app>.vercel.app/api/stats`
 
 ---
 
 ## API
 
 ### `POST /api/prompt`
+
+**Request:**
 ```json
 { "question": "List exactly 3 articles about education. Return only the titles." }
 ```
-Response:
+
+**Response:**
 ```json
 {
-  "response": "Final natural language answer from gpt-5-mini.",
+  "response": "Here are 3 articles about education: ...",
   "context": [
-    { "article_id": "1234", "title": "Sample title", "authors": "Jane Doe", "url": "https://...", "tags": "tech,ai", "chunk": "retrieved chunk", "score": 0.8123 }
+    {
+      "article_id": "1234",
+      "title": "Learning at Scale",
+      "authors": "Jane Doe",
+      "url": "https://medium.com/...",
+      "tags": "education,learning",
+      "chunk": "...retrieved passage...",
+      "score": 0.8741
+    }
   ],
   "Augmented_prompt": {
-    "System": "the system prompt used to query the chat model",
-    "User": "the user prompt used to query the chat model"
+    "System": "...the system prompt sent to the model...",
+    "User": "...the full user prompt with injected context..."
   }
 }
 ```
 
+Returns `400` if `question` is missing or empty, `500` if the pipeline fails.
+
 ### `GET /api/stats`
+
+Returns the active RAG hyperparameters:
 ```json
 { "chunk_size": 512, "overlap_ratio": 0.15, "top_k": 12 }
 ```
 
 ---
 
-## Hyperparameter choices (and why)
+## Hyperparameter choices
 
-| Param | Value | Rationale |
-|---|---|---|
-| `chunk_size` | **512 tokens** | Keeps an idea intact while staying mostly on-topic; under the 1024 cap. |
-| `overlap_ratio` | **0.15** | Avoids splitting sentences across boundaries without paying to embed the same text twice; under the 0.3 cap. |
-| `top_k` | **12** | Guarantees at least 4 distinct articles (12 ÷ 3 cap = 4) for "list 3" queries, with headroom for grounding summaries, while staying well under the 30 cap. |
-| `max_chunks_per_article` | **3** | Retrieval over-fetches `top_k × 4`, then caps chunks per article so multi-result questions get **distinct** articles while fact/summary questions still get the strongest passages. |
+**Chunk size: 512 tokens.** Keeps a single idea or argument intact. Going larger risks mixing unrelated content in one chunk; going smaller risks cutting sentences mid-thought. 512 is the sweet spot for editorial-length Medium articles.
 
-**Compare settings cheaply (the assignment asks for this):** ingest a small
-subset once (`--limit 200`), then change only `TOP_K` / `MAX_CHUNKS_PER_ARTICLE`
-in `.env.local` and re-run `eval.py` — these are query-time params needing **no**
-re-embedding. Only `CHUNK_SIZE` / `OVERLAP_RATIO` require re-ingesting, so test
-those last on the small subset before a full ingest.
+**Overlap: 0.15 (15%).** Enough to avoid hard breaks at chunk boundaries without paying to embed the same text twice. 30% would double the index size for marginal retrieval gain.
+
+**Top-k: 12.** With a cap of 3 chunks per article, 12 guarantees at least 4 distinct articles reach the model — enough headroom for "list exactly 3" questions. Well under the 30 cap, so the prompt doesn't balloon.
+
+**Max chunks per article: 3.** The retriever over-fetches `top_k × 4 = 48` candidates, then greedily selects up to 3 from each article. This gives fact and summary questions several strong passages from the same source while forcing multi-listing questions to pull from different articles.
+
+---
 
 ## Budget notes
 
-`text-embedding-3-small` is ~$0.02 / 1M tokens; a full ingest of the corpus costs
-only a few cents, and gpt-5-mini queries are tiny. Starting with `--limit` keeps
-early experiments effectively free — well within the $5 budget.
-
-## Notes / gotchas
-
-- **tiktoken** is used only at **ingest** time (for token-accurate chunking) and
-  downloads its vocab on first run, so run ingest where there's internet. The
-  serving path does **not** tokenize (`check_embedding_ctx_length=False`), so the
-  Vercel function never needs that download.
-- `ChatOpenAI` is created with `temperature=1` because gpt-5-mini style models
-  only accept the default temperature. If your gateway rejects the parameter
-  entirely, remove it in `rag/clients.py`.
-- The required system prompt is sent **verbatim**; the model is told to answer
-  only from context and to reply *"I don't know based on the provided Medium
-  articles data."* when context is insufficient.
+`text-embedding-3-small` runs at ~$0.02 / 1M tokens. A full ingest of the ~7,600-article corpus costs a few cents. Testing with `--limit 200` first is effectively free. `gpt-5-mini` query costs are negligible. Well within the $5 budget if you avoid re-ingesting the whole corpus every time you tune a parameter.
