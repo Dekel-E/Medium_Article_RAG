@@ -1,7 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(python -c \"import pdfplumber; pdf = pdfplumber.open\\('Individual RAG Assignment.pdf'\\); [print\\(p.extract_text\\(\\)\\) for p in pdf.pages]\")"
-    ]
-  }
-}
