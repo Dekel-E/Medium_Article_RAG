@@ -8,12 +8,12 @@ import os
 
 CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "512"))          # tokens, max 1024
 OVERLAP_RATIO = float(os.getenv("OVERLAP_RATIO", "0.15"))  # 0..0.3
-TOP_K = int(os.getenv("TOP_K", "8"))                       # 1..30 chunks to the model
+TOP_K = int(os.getenv("TOP_K", "12"))                      # 1..30 chunks to the model
 
 # After over-fetching, keep at most this many chunks per article so that
 # "list 3 distinct articles" questions get article diversity, while fact /
 # summary questions still get the strongest passages.
-MAX_CHUNKS_PER_ARTICLE = int(os.getenv("MAX_CHUNKS_PER_ARTICLE", "2"))
+MAX_CHUNKS_PER_ARTICLE = int(os.getenv("MAX_CHUNKS_PER_ARTICLE", "3"))
 
 # Models exactly as provided by the assignment gateway.
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "4UHRUIN-text-embedding-3-small")

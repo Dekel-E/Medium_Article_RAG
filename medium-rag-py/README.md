@@ -53,8 +53,8 @@ Fill `.env.local`:
 | `CHAT_MODEL` | `4UHRUIN-gpt-5-mini` (default) |
 | `PINECONE_API_KEY` | from the Pinecone console |
 | `PINECONE_INDEX` | `medium-rag` (default; created automatically) |
-| `CHUNK_SIZE` / `OVERLAP_RATIO` / `TOP_K` | `512` / `0.15` / `8` |
-| `MAX_CHUNKS_PER_ARTICLE` | `2` |
+| `CHUNK_SIZE` / `OVERLAP_RATIO` / `TOP_K` | `512` / `0.15` / `12` |
+| `MAX_CHUNKS_PER_ARTICLE` | `3` |
 
 The index is created with dimension **1536** to match `text-embedding-3-small`.
 
@@ -105,7 +105,7 @@ Response:
 {
   "response": "Final natural language answer from gpt-5-mini.",
   "context": [
-    { "article_id": "1234", "title": "Sample title", "chunk": "retrieved chunk", "score": 0.8123 }
+    { "article_id": "1234", "title": "Sample title", "authors": "Jane Doe", "url": "https://...", "tags": "tech,ai", "chunk": "retrieved chunk", "score": 0.8123 }
   ],
   "Augmented_prompt": {
     "System": "the system prompt used to query the chat model",
@@ -116,7 +116,7 @@ Response:
 
 ### `GET /api/stats`
 ```json
-{ "chunk_size": 512, "overlap_ratio": 0.15, "top_k": 8 }
+{ "chunk_size": 512, "overlap_ratio": 0.15, "top_k": 12 }
 ```
 
 ---
@@ -127,8 +127,8 @@ Response:
 |---|---|---|
 | `chunk_size` | **512 tokens** | Keeps an idea intact while staying mostly on-topic; under the 1024 cap. |
 | `overlap_ratio` | **0.15** | Avoids splitting sentences across boundaries without paying to embed the same text twice; under the 0.3 cap. |
-| `top_k` | **8** | Enough breadth for "list 3 distinct articles" and for grounding summaries, without bloating context. |
-| `max_chunks_per_article` | **2** | Retrieval over-fetches `top_k × 4`, then caps chunks per article so multi-result questions get **distinct** articles while fact/summary questions still get the strongest passages. |
+| `top_k` | **12** | Guarantees at least 4 distinct articles (12 ÷ 3 cap = 4) for "list 3" queries, with headroom for grounding summaries, while staying well under the 30 cap. |
+| `max_chunks_per_article` | **3** | Retrieval over-fetches `top_k × 4`, then caps chunks per article so multi-result questions get **distinct** articles while fact/summary questions still get the strongest passages. |
 
 **Compare settings cheaply (the assignment asks for this):** ingest a small
 subset once (`--limit 200`), then change only `TOP_K` / `MAX_CHUNKS_PER_ARTICLE`

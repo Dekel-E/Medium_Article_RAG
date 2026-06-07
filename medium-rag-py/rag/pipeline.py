@@ -64,6 +64,9 @@ def answer(question: str) -> Dict:
             {
                 "article_id": c["article_id"],
                 "title": c["title"],
+                "authors": c["authors"],
+                "url": c["url"],
+                "tags": c["tags"],
                 "chunk": c["chunk"],
                 "score": round(c["score"], 4),
             }
