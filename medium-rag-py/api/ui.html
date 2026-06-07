@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Medium RAG Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="layout">
+
+  <!-- Sidebar -->
+  <aside>
+    <div class="brand">
+      <label class="logo-placeholder" title="Click to upload your logo">
+        <svg id="logoIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <path d="M3 9h18M9 21V9"/>
+        </svg>
+        <img id="logoImg" src="" style="display:none" alt="logo">
+        <input type="file" accept="image/*" onchange="uploadLogo(this)">
+      </label>
+      <div>
+        <div class="brand-name">Medium RAG</div>
+        <div class="brand-sub">Article Assistant</div>
+      </div>
+    </div>
+
+    <div class="sidebar-label">Examples</div>
+    <button class="example-btn" onclick="fillQ(this)">Fact: Find an article about reframing marketing as a conversation with writers.</button>
+    <button class="example-btn" onclick="fillQ(this)">List exactly 3 articles about education. Return only the titles.</button>
+    <button class="example-btn" onclick="fillQ(this)">Summarise an article arguing that past pandemics spurred innovation.</button>
+    <button class="example-btn" onclick="fillQ(this)">Recommend a beginner-friendly article on building habits that stick.</button>
+
+    <div class="sidebar-label">RAG Config</div>
+    <div class="stat-row"><span class="stat-key">chunk size</span><span class="stat-val" id="sChunk">—</span></div>
+    <div class="stat-row"><span class="stat-key">overlap</span><span class="stat-val" id="sOverlap">—</span></div>
+    <div class="stat-row"><span class="stat-key">top-k</span><span class="stat-val" id="sTopK">—</span></div>
+
+    <div class="sidebar-footer">
+      Answers are grounded solely in the indexed Medium articles dataset.
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <div class="status-dot offline" id="statusDot"></div>
+      <span class="topbar-title">Ask the Medium corpus</span>
+    </div>
+
+    <div class="content">
+      <div class="hero">
+        <h2>What do the articles say?</h2>
+        <p>Query ~7,600 Medium articles using RAG — no external knowledge, only the dataset.</p>
+      </div>
+
+      <!-- Input -->
+      <div class="input-card">
+        <textarea id="question" placeholder="Ask a question about the Medium articles…"
+                  rows="3" oninput="autoResize(this)"></textarea>
+        <div class="input-footer">
+          <span class="input-hint">Enter to send &nbsp;·&nbsp; Shift+Enter for new line</span>
+          <button class="send-btn" id="sendBtn" onclick="sendQuery()">
+            <div class="spin" id="spinner"></div>
+            <span id="sendLabel">Ask</span>
+            <svg id="sendIcon" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"/>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Result (hidden until first query) -->
+      <div id="result">
+        <div class="sec-label" id="resultLabel">Answer</div>
+
+        <div class="answer-card" id="answerCard">
+          <div class="answer-text" id="answerText"></div>
+        </div>
+
+        <div class="sources-card" id="sourcesCard">
+          <div class="sec-label" id="sourcesLabel">Sources</div>
+          <div class="sources-grid" id="sourcesGrid"></div>
+        </div>
+
+        <div class="prompt-card">
+          <details>
+            <summary>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="16 18 22 12 16 6"/>
+                <polyline points="8 6 2 12 8 18"/>
+              </svg>
+              Augmented Prompt
+            </summary>
+            <div class="prompt-body">
+              <div class="prompt-section-label">System</div>
+              <pre id="promptSystem"></pre>
+              <div class="prompt-section-label">User</div>
+              <pre id="promptUser"></pre>
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script src="/static/app.js"></script>
+</body>
+</html>

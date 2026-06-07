@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+.env.local
+data/*.csv
+.vercel
+.DS_Store
+
