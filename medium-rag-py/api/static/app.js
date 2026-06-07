@@ -72,10 +72,16 @@ function renderResult(data) {
   const grid = document.getElementById('sourcesGrid');
   grid.innerHTML = '';
   ctx.forEach(c => {
-    const el = document.createElement('div');
+    const el = document.createElement(c.url ? 'a' : 'div');
     el.className = 'source-item';
+    if (c.url) {
+      el.href = c.url;
+      el.target = '_blank';
+      el.rel = 'noopener noreferrer';
+    }
     el.innerHTML =
       `<div class="source-item-title">${esc(c.title || 'Untitled')}</div>` +
+      (c.authors ? `<div class="source-item-author">${esc(c.authors)}</div>` : '') +
       `<div class="score-badge">` +
         `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">` +
           `<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>` +
@@ -85,10 +91,6 @@ function renderResult(data) {
       `<div class="source-snippet">${esc(c.chunk || '')}</div>`;
     grid.appendChild(el);
   });
-
-  const ap = data.Augmented_prompt || {};
-  document.getElementById('promptSystem').textContent = ap.System || '';
-  document.getElementById('promptUser').textContent   = ap.User   || '';
 
   document.getElementById('result').style.display = 'block';
   document.getElementById('result').scrollIntoView({ behavior: 'smooth', block: 'start' });

@@ -341,13 +341,24 @@ textarea::placeholder { color: var(--muted); }
   padding: 12px 14px;
   transition: border-color .15s, transform .15s;
 }
-.source-item:hover { border-color: var(--border-hover); transform: translateY(-1px); }
+a.source-item { text-decoration: none; color: inherit; cursor: pointer; }
+.source-item:hover { border-color: var(--accent); transform: translateY(-1px); }
+a.source-item:hover .source-item-title { color: var(--accent-hover); }
 .source-item-title {
   font-size: 12.5px;
   font-weight: 600;
   color: var(--text);
   line-height: 1.3;
+  margin-bottom: 4px;
+  transition: color .15s;
+}
+.source-item-author {
+  font-size: 11px;
+  color: var(--muted);
   margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .score-badge {
   display: inline-flex;
@@ -370,64 +381,6 @@ textarea::placeholder { color: var(--muted); }
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
-}
-
-/* ── Augmented prompt ────────────────────────────── */
-.prompt-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-  margin-bottom: 16px;
-}
-details summary {
-  padding: 14px 20px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--muted-2);
-  list-style: none;
-  user-select: none;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: color .15s, background .15s;
-}
-details summary:hover { background: var(--surface-2); color: var(--text); }
-details summary::after {
-  content: '▸';
-  margin-left: auto;
-  font-size: 12px;
-  transition: transform .2s;
-}
-details[open] summary::after { transform: rotate(90deg); }
-details summary::-webkit-details-marker { display: none; }
-
-.prompt-body {
-  padding: 0 20px 20px;
-  border-top: 1px solid var(--border);
-}
-.prompt-section-label {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .08em;
-  color: var(--muted);
-  margin: 16px 0 8px;
-}
-pre {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 12px 14px;
-  font-size: 11.5px;
-  font-family: "SFMono-Regular", Consolas, "Fira Code", monospace;
-  color: var(--muted-2);
-  white-space: pre-wrap;
-  word-break: break-word;
-  line-height: 1.6;
-  max-height: 300px;
-  overflow-y: auto;
 }
 
 /* ── Error ───────────────────────────────────────── */
